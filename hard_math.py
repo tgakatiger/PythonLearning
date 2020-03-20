@@ -1,4 +1,5 @@
 from collections import namedtuple
+from math import log2
 
 class Pair:
     def __init__(self, a, b):
@@ -52,10 +53,15 @@ class HMSolver:
 
     def get_pairs_list(self):
         out = set()
+        numbers = Numbers()
         for i in range(2, int(self.num ** 0.5) + 2):
             if self.num % i == 0:
                 pair = Pair(int(i), int(self.num/i))
-                if pair not in out and 2 not in pair:
+                if pair not in out \
+                   and not numbers.all_primes_in_pair(pair) \
+                   and numbers.is_even(pair.a * pair.b) \
+                   and not numbers.is_even(pair.a + pair.b):
+                   # and (2 in pair and all([numbers.is_even(i) for i in pair])):
                     out.add(pair)
         return sorted(list(out))
 
@@ -64,11 +70,6 @@ class HMSolver:
         for pair in self.item.pairs:
             out.append(PairSum(pair))
         return sorted(out)
-
-    def is_even(self):
-        if self.num % 2 == 0:
-            return True
-        return False
 
 
 class HMStructInit:
@@ -80,6 +81,7 @@ class HMStructInit:
         self.hms.pairs = hmsolver.get_pairs_list()
         self.hms.pairs_len = len(self.hms.pairs)
         self.hms.pairs_sum = hmsolver.get_pairs_sum()
+        self.hms.dividers = PrimeRange(self.hms.num).decompose()
 
     def get(self):
         return self.hms
@@ -90,6 +92,9 @@ class HMStruct:
         self.num = num
         self.set = None
         self.pairs = None
+
+    def get_pairs(self):
+        return self.pairs
         
 
 class HMTemplateBase:
@@ -150,9 +155,8 @@ class HMView:
                 
 class HMViewLogic:
     def check(self, item):
-        prime = Primes()
-        if item.pairs_len > 1 and not prime.is_prime(item.num) \
-           and not all([prime.can_decomposed(i) for i in [int(j) for j in HMSolver(item).get_pairs_sum()]]):
+        number = Numbers()
+        if item.pairs_len > 1: # and not number.find_in_pair_list(2, item.get_pairs()):
             return True
         return False
 
@@ -161,9 +165,13 @@ class HMViewAllLogic:
         return True
     
 
-class Primes:
+class Numbers:
     def is_prime(self, num=None):
-        for i in range(2, int(num ** 0.5) + 2):
+        if num < 2:
+            return False
+        if num == 2:
+            return True
+        for i in range(2, int(num ** 0.5) + 1):
             if num % i == 0:
                 return False
         return True
@@ -174,11 +182,69 @@ class Primes:
             if num - i in primes_list:
                 return False
         return True
+
+    def is_even(self, num=None):
+        if num % 2 == 0:
+            return True
+        return False
+
+    def is_not_even(self, num=None):
+        return not self.is_even(num)
+
+    def is_pow_of_two(self, num=None):
+        l = int(log2(num))
+        if num == 2 ** l:
+            return True
+        return False
+
+    def check_pair_for_power(self, pair=None):
+        return any([self.is_pow_of_two(num) for num in pair])
+
+    def all_primes_in_pair(self, pair=None):
+        return all([self.is_prime(num) for num in pair])
+
+    def find_in_pair_list(self, num=None, pair_list=None):
+        out_list = [nums for pairs in pair_list for nums in pairs]
+        print(out_list)
+
     
+class Goldbah:
+    def __init__(self, num):
+        self.num = num
+
+    def get(self):
+        number = Numbers()
+        out = set()
+        for i in range (2, self.num):
+            if number.is_prime(i):
+                remain = self.num - i
+                if number.is_prime(remain):
+                    out.add(Pair(i, remain))
+        return list(out)
+
+
+class PrimeRange:
+    def __init__(self, num=None):
+        self.num = num
+
+    def decompose(self):
+        remain = self.num
+        out = list()
+        if remain == 1: return [1]
+        if remain < 1 or not isinstance(remain, int): raise TypeError
+        divider = 2
+        while remain != 1:
+            if remain % divider == 0:
+                remain = remain // divider
+                out.append(divider)
+                continue
+            divider += 1
+        return out
+
     
 def main():
     items_list = [HMStructInit(HMStruct(i)).get() for i in range(2, 100)]
-    view_template = 'num set_len pairs_len pairs pairs_sum'
+    view_template = 'num set_len pairs_len pairs pairs_sum dividers'
     
     hm_view_template = HMViewTemplate()
     hm_view_template.set_template(view_template)
@@ -187,6 +253,9 @@ def main():
     
     hm = HMView(items_list, hm_view_template, hm_view_logic)
     hm.view()
+
+    for i in range(6, 50, 2):
+        print(f'{i} {sorted(Goldbah(i).get())} <=> {PrimeRange(i).decompose()}')
 
 
 main()
