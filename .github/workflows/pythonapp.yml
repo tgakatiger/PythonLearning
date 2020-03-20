@@ -36,4 +36,5 @@ jobs:
         pip install pytest
         pytest
     - name: Run file
+      run: |
         python -m hard_math.py
