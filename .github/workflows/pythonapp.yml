@@ -37,4 +37,5 @@ jobs:
         # pytest
     - name: Run file
       run: |
+        cd hard_math
         python -m hard_math.py
